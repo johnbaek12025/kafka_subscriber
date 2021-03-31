@@ -40,7 +40,6 @@ class DBManager(object):
     def get_all_rows(self, sql):
         try:
             cur = self.conn.cursor()
-            print("sql: %s" % sql)
             logger.info("sql: %s" % sql)
             cur.execute(sql)
             return cur.fetchall()
@@ -51,7 +50,7 @@ class DBManager(object):
     def modify_many(self, sql, rows, commit):
         try:
             cur = self.conn.cursor()
-            # logger.info("sql: %s" % sql)
+            logger.info("sql: %s" % sql)
             cur.prepare(sql)
             cur.executemany(None, rows)
             if commit:

@@ -4,5 +4,5 @@ class Defaults(object):
     # host and port of the message manager (Kafka broker)
     KAFKA_HOST = "localhost"
     KAFKA_PORT = 9092
-    KAFKA_TOPIC = ["test"]
-    KAFKA_LOOP_DELAY = 0.001
+    KAFKA_LOOP_DELAY = 1000  # millisecond
+    KAFKA_AUTO_OFFSET_RESET = "latest"

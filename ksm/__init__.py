@@ -11,6 +11,7 @@ import os
 import platform
 import pickle
 import sys
+import signal
 import regex as re
 
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
@@ -100,7 +101,7 @@ def setup_logging(
     fmt = (
         "%(asctime)s.%(msecs)03d %(processName)s %(threadName)s %(name)s %(funcName)s: %(message)s"
         if level == logging.DEBUG
-        else "[%(asctime)s.%(msecs)03d][%(filename)s:%(lineno)d] %(message)s"
+        else "[%(asctime)s.%(msecs)03d][%(processName)s %(threadName)s][%(filename)s:%(lineno)d] %(message)s"
     )
 
     datefmt = "%Y.%m.%d %H:%M:%S"
