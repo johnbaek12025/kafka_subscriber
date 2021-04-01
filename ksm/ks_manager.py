@@ -31,7 +31,7 @@ class KSManager(object):
         self.kafka_manager = None
         # fixme: 아래 count 를 사용하기 위해서, kafka의 group과 partition 설정해야함
         self.subscribers = [
-            {"sub_id": "analysis_content", "count": 0},
+            {"sub_id": "analysis_content", "count": 1},
             {"sub_id": "rassiro_news", "count": 1},
         ]
         self.workers = {}
