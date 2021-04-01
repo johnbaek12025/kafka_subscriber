@@ -66,7 +66,7 @@ class kafkaSubs(object):
         except KeyboardInterrupt:
             pass
         finally:
-            print(f"kafka {self.client_id} is shutting down")
+            logger.info(f"shutdown kafka {self.client_id}")
             self.disconnect()
 
     def handle_message(self, m):

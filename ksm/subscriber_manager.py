@@ -19,5 +19,4 @@ class SubscriberManager(object):
             mgr = self.db_mgrs[mgr_id]
             if mgr is None:
                 continue
-            print(f"disconnected from {mgr_id},{mgr}")
             mgr.disconnect()

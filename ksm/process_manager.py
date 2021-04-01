@@ -16,14 +16,14 @@ def finalize_processor(workers):
         child = workers[p_id]
         if child is None:
             continue
-        logger.info("shutdown %s" % p_id)
+        logger.info(f"stop process {p_id}")
         child.stop()
 
     for p_id in workers:
         child = workers[p_id]
         if child is None:
             continue
-        logger.info("join %s" % p_id)
+        logger.info(f"join {p_id}")
         child.terminate()
         child.join()
 
