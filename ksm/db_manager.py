@@ -37,13 +37,13 @@ class DBManager(object):
             self.conn.close()
             self.conn = None
 
-    def callproc(self, sql, args=()):
+    def callproc(self, procedure_name, args=()):
         try:
             with self.conn.cursor() as cur:
-                logger.info("sql: %s" % sql)
-                cur.callproc(sql, args)
+                logger.info(f"procedure: {procedure_name}, arguments: {args}")
+                cur.callproc(procedure_name, args)
         except Exception as err:
-            logger.error(f"procedure {sql} failed: {err}")
+            logger.error(f"procedure {procedure_name} failed: {err}")
 
     def get_all_rows(self, sql):
         try:
