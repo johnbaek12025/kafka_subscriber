@@ -1,8 +1,5 @@
-# Analsis Data Manager
-프로그램 설명 필요!!!
-
-## ADM 실행 순서
-
+# KAFKA Subscriber
+## 설치 방법
 1. git 설치
 ```
 https://git-scm.com/
@@ -25,7 +22,7 @@ pip install -r requirements.txt
 ```
 
 - 오라클 라이브러리
-아래 링크에서 다운로드 받아 설치
+기존에 설치안했다면, 아래 링크에서 다운로드 받아 설치
 ```
 https://www.oracle.com/kr/database/technologies/instant-client/winx64-64-downloads.html
 ```
@@ -51,31 +48,10 @@ cd bin
 python ks-manager.py --config=../cfg/cm.cfg
 ```
 
-
-## 카프카 (정리중...)
-
-```
-zookeeper-server-start.bat D:\kafka\config\zookeeper.properties
-
-kafka-server-start.bat D:\kafka\config\server.properties
-
-kafka-topics.bat --list --bootstrap-server localhost:9092 
-
-kafka-topics.bat --create --topic %1 --replication-factor 1 --partitions 1  --zookeeper localhost:2181
-
-# server.properties 에서 delete.topic.enable = True 로 설정해도 안됨..
-kafka-topics.bat --delete --zookeeper localhost:9092 --topic topic_name
-
-
-kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic test
-
-kafka-console-producer.bat --bootstrap-server localhost:9092 --topic test
-
-
-
-
-
-[server.properties]
-
-advertised.listeners=PLAINTEXT://121.254.150.120:9092
-```
+8. 프로그램 종료
+- `Ctrl + C` 로 종료해야 함 (현재 개발에서는 되지만 상용에서는 안됨)
+- 오라클 sqlnet.ora 중,  DISABLE_OOB 가 'ON' 으로 설정되어 있을 경우, `Ctrl + C` 로 프로그램 종료가 안됨 
+- DB 설정을 바꿀수 없는 상황이니, `Ctrl + Z` 로 프로그램을 나와서 프로세스는 직접 제거
+    ```
+    $ kill -9 `ps -ef | grep "python bin/ks-manager.py" | grep -v grep | awk '{print $2}'`
+    ```
