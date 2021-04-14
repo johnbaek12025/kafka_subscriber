@@ -2,7 +2,7 @@
 """
 """
 
-__appname__ = "analysis-contents-manager"
+__appname__ = "kafka-subscriber"
 __version__ = "1.0"
 
 

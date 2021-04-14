@@ -21,7 +21,7 @@ class kafkaSubs(object):
 
     def get_topics(self):
         """
-        Derived class must define the list of topics that will be subscribed.
+        Derived class must define the list of topics that will to subscribe.
         For example: ['topic1', 'topic2']
         """
         return []

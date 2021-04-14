@@ -3,6 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# fixme: 이 부분을 ks_manager 로 빼주자
 class SubscriberManager(object):
     def __init__(self):
         self.use_db = False
