@@ -30,23 +30,6 @@ class Subscriber(kafkaSubs, SubscriberManager):
         self.initialize()
         self.handle_messages()
 
-    @staticmethod
-    def get_message_format():
-        return {
-            "inp_kind": None,
-            "sn": None,
-            "ori_sn": None,
-            "stkcode": None,
-            "module_date": None,
-            "module_time": None,
-            "module_code": None,
-            "module_name": None,
-            "module_title": None,
-            "module_summary": None,
-            "module_cnts": None,
-            "module_url": None,
-        }
-
     def handle_message(self, m):
         message = json.loads(m.value)
 
@@ -88,27 +71,40 @@ class Subscriber(kafkaSubs, SubscriberManager):
 
     def get_procedure_data(self, d_news_crt, sn, news_code):
         sql = f"""
-            SELECT  'I'                               AS P_INP_KIND, -- I: 신규뉴스, U:수정뉴스, D:삭제뉴스 
-                    A.NEWS_SN || A.D_NEWS_CRT         AS P_SN,       -- NEWS_SN + D_NEWS_CRT     
-                    C.ORI_NEWS_SN || C.D_ORI_NEWS_CRT AS P_ORI_SN,   -- ORI_NEWS_SN + D_ORI_NEWS_CRT
-                    C.STK_CODE                AS P_STKCODE,        -- 종목코드
-                    A.D_NEWS_CNTS_CRT         AS P_MODULE_DATE,    -- 데이터 기준일자 
-                    A.T_NEWS_CNTS_CRT         AS P_MODULE_TIME,    -- 데이터 기준시간 
-                    A.NEWS_CODE               AS P_MODULE_CODE,    -- 뉴스코드(=분석모듈 코드)
-                    B.ALS_TYPE                AS P_MODULE_NAME,    -- 분석모듈 타입
-                    C.NEWS_TITLE              AS P_MODULE_TITLE,   -- 뉴스제목(=분석모듈 좌측 상단 큰타이틀)
-                    B.ALS_DESC                AS P_MODULE_SUMMARY, -- 분석모듈설명(=분석모듈 좌측 하단 설명글)
-                    A.NEWS_CNTS               AS P_MODULE_CNTS,    -- 뉴스본문(=분석모듈 우측 내용)
-                    'URL'                     AS P_MODULE_URL      -- 더보기 URL
-            FROM    RTBL_NEWS_CNTS_ATYPE A,
-                    RTBL_LUP_ALS_DESC B,
-                    RTBL_NEWS_INFO C
-            WHERE   A.D_NEWS_CRT = '{d_news_crt}'
-            AND     A.NEWS_SN    = {sn}
+            SELECT  A.NEWS_INP_KIND                     AS P_INP_KIND       
+                    , A.NEWS_SN || A.D_NEWS_CRT         AS P_SN           
+                    , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT AS P_ORI_SN
+                    , A.STK_CODE                        AS P_STKCODE   
+                    , CASE WHEN A.IS_MANUAL = 0 THEN A.D_NEWS_CRT 
+                           ELSE D.DATEDEAL END AS P_MODULE_DATE 
+                    , A.T_NEWS_CRT      AS P_MODULE_TIME
+                    , A.NEWS_CODE       AS P_MODULE_CODE   
+                    , B.ALS_TYPE        AS P_MODULE_NAME   
+                    , A.NEWS_TITLE      AS P_MODULE_TITLE  
+                    , B.ALS_DESC        AS P_MODULE_SUMMARY
+                    , C.NEWS_CNTS       AS P_MODULE_CNTS
+                    , C.RPST_IMG_URL    AS P_MODULE_URL   
+            FROM    RTBL_NEWS_INFO A 
+                    , RTBL_LUP_ALS_DESC B
+                    , RTBL_NEWS_CNTS_ATYPE C
+                    , (
+                        SELECT  A.DATEDEAL
+                        FROM    DATA_ENG.ALS_MAIN A
+                                , (
+                                    SELECT  INFO_CODE, INFO_SN
+                                    FROM    RTBL_COM_ALS_INFOSN 
+                                    WHERE   SN    = '{d_news_crt}'
+                                    AND     D_CRT = {sn}
+                                ) B
+                        WHERE   A.SN        = B.INFO_SN
+                        AND     A.INFO_CODE = B.INFO_CODE   
+                    ) D
+            WHERE   1 = 1
+            AND     A.D_NEWS_CRT    = '{d_news_crt}'
+            AND     A.NEWS_SN       = {sn}  
             AND     B.ALS_NEWS_CODE = '{news_code}'
-            AND     C.D_NEWS_CRT = '{d_news_crt}'
-            AND     C.NEWS_SN    = {sn}        
-
+            AND     C.D_NEWS_CRT    = '{d_news_crt}'
+            AND     C.NEWS_SN       = {sn}      
         """
         rows = self.nu_db.get_all_rows(sql)
         if not rows:

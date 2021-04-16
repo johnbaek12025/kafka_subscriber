@@ -79,25 +79,38 @@ class Subscriber(kafkaSubs, SubscriberManager):
 
     def get_procedure_data(self, d_news_crt, sn, news_code):
         sql = f"""
-            SELECT  'I'                                               AS P_INPUT -- I:입력, U:수정, D:삭제 
-                    , B.NEWS_SN || B.D_NEWS_CRT || B.T_NEWS_CRT       AS P_NEWS_SN  
-                    , B.ORI_NEWS_SN || B.D_ORI_NEWS_CRT               AS P_ORI_SN        
-                    , B.STK_CODE || C.RSC_CODE                        AS P_CODES -- 종목코드
-                    , B.NEWS_TITLE                                    AS P_TITLE  
-                    , DECODE(A.RPST_IMG_URL, 'N', '', A.RPST_IMG_URL) AS P_IMG_URL 
-                    , DECODE(A.RPST_IMG_URL, 'N', 'N', 'Y')           AS P_IMG_FLAG
+            SELECT  A.NEWS_INP_KIND AS P_INPUT
+                    , A.NEWS_SN || A.D_NEWS_CRT || A.T_NEWS_CRT       AS P_NEWS_SN  
+                    , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT               AS P_ORI_SN        
+                    , A.STK_CODE || B.AGG_RSC_CODE                    AS P_CODES
+                    , A.NEWS_TITLE                                    AS P_TITLE  
+                    , DECODE(C.RPST_IMG_URL, 'N', '', C.RPST_IMG_URL) AS P_IMG_URL 
+                    , DECODE(C.RPST_IMG_URL, 'N', 'N', 'Y')           AS P_IMG_FLAG 
                     , A.NEWS_CODE                                     AS P_NEWS_CODE
-                    , ''                                              AS P_ORI_LINK_SN -- 원본 데이터 식별값 (공시 RCPno 또는 리포트 SN 등)  
-                    , 19                                              AS P_SOURCE --  뉴스 source | 고정값 19   
-            FROM    RTBL_NEWS_CNTS_ATYPE A,
-                    RTBL_NEWS_INFO B,
-                    RTBL_COM_RSC C
-            WHERE   A.D_NEWS_CRT = '{d_news_crt}'
+                    , D.DBKEY                                         AS P_ORI_LINK_SN
+                    , 19                                              AS P_SOURCE --  뉴스 source | 고정값 19      
+            FROM    RTBL_NEWS_INFO A
+                    , (
+                        -- 굉장히 이상한 방식의 데이터 입력
+                        SELECT  LISTAGG(RSC_CODE,'') WITHIN GROUP (ORDER BY ROWNUM) AS AGG_RSC_CODE
+                        FROM    (
+                                    SELECT  RSC_CODE, ROWNUM RN
+                                    FROM    RTBL_COM_RSC B
+                                    WHERE   B.D_CRT = '{d_news_crt}'
+                                    AND     B.SN = {sn}
+                                    ORDER BY ROWNUM DESC
+                                ) A
+                        WHERE   ROWNUM  <= 8
+                    ) B
+                    , RTBL_NEWS_CNTS_ATYPE C
+                    , RTBL_COM_RDB_KEY D      
+            WHERE   1 = 1
+            AND     A.D_NEWS_CRT = '{d_news_crt}'
             AND     A.NEWS_SN    = {sn}
-            AND     B.D_NEWS_CRT = '{d_news_crt}'
-            AND     B.NEWS_SN    = {sn}
-            AND     C.D_CRT      = '{d_news_crt}'
-            AND     C.SN         = {sn}      
+            AND     C.D_NEWS_CRT = '{d_news_crt}'
+            AND     C.NEWS_SN    = {sn}
+            AND     D.D_CRT      = '{d_news_crt}'
+            AND     D.SN         = {sn}    
         """
         rows = self.nu_db.get_all_rows(sql)
         if not rows:
