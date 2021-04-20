@@ -1,5 +1,9 @@
 # Copyright 2021 ThinkPool, all rights reserved
 """
+- Ctrl + C 로 종료해야 함 (현재 개발에서는 되지만 상용에서는 안됨)
+- 오라클 sqlnet.ora 중,  DISABLE_OOB 가 'ON' 으로 설정되어 있을 경우, Ctrl + C 로 프로그램 종료가 안됨
+- DB 설정을 바꿀수 없는 상황이니, Ctrl + Z 로 프로그램을 나와서 프로세스는 직접 제거
+$ kill -9 `ps -ef | grep "python bin/ks-manager.py" | grep -v grep | awk '{print $2}'`
 """
 
 __appname__ = "kafka-subscriber"

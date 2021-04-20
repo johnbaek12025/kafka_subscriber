@@ -75,19 +75,9 @@ class Subscriber(kafkaSubs, SubscriberManager):
                     , A.NEWS_SN || A.D_NEWS_CRT         AS P_SN           
                     , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT AS P_ORI_SN
                     , A.STK_CODE                        AS P_STKCODE   
+                    -- 인라인으로 하기 싫었지만, 상용과 개발을 혼합해서 사용해야 하는 상황이라...
                     , CASE WHEN A.IS_MANUAL = 0 THEN A.D_NEWS_CRT 
-                           ELSE D.DATEDEAL END AS P_MODULE_DATE 
-                    , A.T_NEWS_CRT      AS P_MODULE_TIME
-                    , A.NEWS_CODE       AS P_MODULE_CODE   
-                    , B.ALS_TYPE        AS P_MODULE_NAME   
-                    , A.NEWS_TITLE      AS P_MODULE_TITLE  
-                    , B.ALS_DESC        AS P_MODULE_SUMMARY
-                    , C.NEWS_CNTS       AS P_MODULE_CNTS
-                    , C.RPST_IMG_URL    AS P_MODULE_URL   
-            FROM    RTBL_NEWS_INFO A 
-                    , RTBL_LUP_ALS_DESC B
-                    , RTBL_NEWS_CNTS_ATYPE C
-                    , (
+                      ELSE  (
                         SELECT  A.DATEDEAL
                         FROM    DATA_ENG.ALS_MAIN A
                                 , (
@@ -98,13 +88,23 @@ class Subscriber(kafkaSubs, SubscriberManager):
                                 ) B
                         WHERE   A.SN        = B.INFO_SN
                         AND     A.INFO_CODE = B.INFO_CODE   
-                    ) D
+                    ) END AS P_MODULE_DATE 
+                    , A.T_NEWS_CRT      AS P_MODULE_TIME
+                    , A.NEWS_CODE       AS P_MODULE_CODE   
+                    , B.ALS_TYPE        AS P_MODULE_NAME   
+                    , A.NEWS_TITLE      AS P_MODULE_TITLE  
+                    , B.ALS_DESC        AS P_MODULE_SUMMARY
+                    , C.NEWS_CNTS       AS P_MODULE_CNTS
+                    , C.RPST_IMG_URL    AS P_MODULE_URL   
+            FROM    RTBL_NEWS_INFO A 
+                    , RTBL_LUP_ALS_DESC B
+                    , RTBL_NEWS_CNTS_ATYPE C                
             WHERE   1 = 1
             AND     A.D_NEWS_CRT    = '{d_news_crt}'
             AND     A.NEWS_SN       = {sn}  
-            AND     B.ALS_NEWS_CODE = '{news_code}'
+            AND     B.ALS_NEWS_CODE = '{news_code.upper()}'
             AND     C.D_NEWS_CRT    = '{d_news_crt}'
-            AND     C.NEWS_SN       = {sn}      
+            AND     C.NEWS_SN       = {sn}  
         """
         rows = self.nu_db.get_all_rows(sql)
         if not rows:
