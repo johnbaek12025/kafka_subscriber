@@ -86,7 +86,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             SELECT  A.NEWS_INP_KIND AS P_INPUT
                     , A.NEWS_SN || A.D_NEWS_CRT || A.T_NEWS_CRT       AS P_NEWS_SN  
                     , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT               AS P_ORI_SN        
-                    , A.STK_CODE || B.AGG_RSC_CODE                    AS P_CODES
+                    , B.AGG_RSC_CODE                    AS P_CODES
                     , A.NEWS_TITLE                                    AS P_TITLE  
                     , DECODE(C.RPST_IMG_URL, 'N', '', C.RPST_IMG_URL) AS P_IMG_URL 
                     , DECODE(C.RPST_IMG_URL, 'N', 'N', 'Y')           AS P_IMG_FLAG 
