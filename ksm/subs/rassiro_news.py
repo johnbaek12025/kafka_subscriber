@@ -78,7 +78,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             logger.info(
                 f"procedure return value {out_result_cd.getvalue()}, {out_result_msg.getvalue()}"
             )
-        except json.decoder.JSONDecodeError as err:
+        except json.decoder.JSONDecodeError:
             logger.info(f"메세지 형식 에러: {m.value}")
 
     def get_procedure_data(self, d_news_crt, sn, news_code):
@@ -86,7 +86,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             SELECT  A.NEWS_INP_KIND AS P_INPUT
                     , A.NEWS_SN || A.D_NEWS_CRT || A.T_NEWS_CRT       AS P_NEWS_SN  
                     , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT               AS P_ORI_SN        
-                    , B.AGG_RSC_CODE                    AS P_CODES
+                    , A.STK_CODE || B.AGG_RSC_CODE                    AS P_CODES
                     , A.NEWS_TITLE                                    AS P_TITLE  
                     , DECODE(C.RPST_IMG_URL, 'N', '', C.RPST_IMG_URL) AS P_IMG_URL 
                     , DECODE(C.RPST_IMG_URL, 'N', 'N', 'Y')           AS P_IMG_FLAG 
@@ -106,7 +106,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
                                     AND     B.SN = {sn}
                                     ORDER BY ROWNUM DESC
                                 ) A
-                        WHERE   ROWNUM  <= 8
+                        WHERE   ROWNUM  <= 7
                     ) B
                     , RTBL_NEWS_CNTS_ATYPE C   
             WHERE   1 = 1
