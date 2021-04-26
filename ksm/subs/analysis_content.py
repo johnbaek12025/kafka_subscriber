@@ -28,21 +28,28 @@ class Subscriber(kafkaSubs, SubscriberManager):
 
     def run(self):
         self.initialize()
-        self.handle_messages()
+        try:
+            self.handle_messages()
+        except Exception as err:
+            logger.info(err)
 
     def handle_message(self, m):
         message = json.loads(m.value)
+        logger.info(f"subcribed message: {message}")
 
         news_code = message.get("news_code")
         news_sn = message.get("news_sn")
         d_news_crt = message.get("d_news_crt")
+
+        # 메세지 처리 여부 상관없이 무조건 완료 처리
+        self.change_requests_status(news_sn, d_news_crt)
+
         if None in [news_code, news_sn, d_news_crt]:
             logger.info(
                 f"Please check message: news_code: {news_code}, news_sn: {news_sn}, d_news_crt: {d_news_crt}"
             )
             return
 
-        logger.info(f"subcribed message: {message}")
         row = self.get_procedure_data(
             d_news_crt=d_news_crt, sn=news_sn, news_code=news_code
         )
@@ -124,3 +131,12 @@ class Subscriber(kafkaSubs, SubscriberManager):
             "module_cnts": r[10].read(),
             "module_url": r[11],
         }
+
+    def change_requests_status(self, news_sn, d_news_crt, status="S", commit=True):
+        sql = f"""
+            UPDATE RTBL_NEWS_INFO
+            SET    ADM_SEND_STATUS = '{status}'
+            WHERE  NEWS_SN = {news_sn}
+            AND    D_NEWS_CRT = '{d_news_crt}'
+        """
+        self.nu_db.modify(sql, commit)

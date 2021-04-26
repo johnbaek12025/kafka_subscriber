@@ -26,60 +26,64 @@ class Subscriber(kafkaSubs, SubscriberManager):
 
     def run(self):
         self.initialize()
-        self.handle_messages()
+        try:
+            self.handle_messages()
+        except Exception as err:
+            logger.info(err)
 
     def handle_message(self, m):
-        try:
-            message = json.loads(m.value)
+        message = json.loads(m.value)
+        logger.info(f"subcribed message: {message}")
 
-            news_code = message.get("news_code")
-            news_sn = message.get("news_sn")
-            d_news_crt = message.get("d_news_crt")
-            if None in [news_code, news_sn, d_news_crt]:
-                logger.info(
-                    f"Please check message: news_code: {news_code}, news_sn: {news_sn}, d_news_crt: {d_news_crt}"
-                )
-                return
+        news_code = message.get("news_code")
+        news_sn = message.get("news_sn")
+        d_news_crt = message.get("d_news_crt")
 
-            logger.info(f"subcribed message: {message}")
-            row = self.get_procedure_data(
-                d_news_crt=d_news_crt, sn=news_sn, news_code=news_code
-            )
-            if row is None:
-                logger.info(f"[error] 해당 정보가 테이블에서 검색 안됨")
-                return
+        # 메세지 처리 여부 상관없이 무조건 완료 처리
+        self.change_requests_status(news_sn, d_news_crt)
 
-            proc_para = list(row.values())
-
-            cur = self.nu_db.conn.cursor()
-            out_result_cd = cur.var(int)
-            proc_para.append(out_result_cd)
-            out_result_msg = cur.var(str)
-            proc_para.append(out_result_msg)
-            """
-            입력예제 :
-                PROC_RASSIRO_NEWS_INSERT(
-                    'I',                     -- P_INPUT   | 입력종류                  | I:입력, U:수정, D:삭제   
-                    '100000020210312151515', -- P_NEWS_SN | SN + 생성일 + 생성시       | SN NEWS_SN + D_NEWS_CRT + T_NEWS_CRT of RTBL_NEWS_INFO
-                    '100000020210312',       -- P_ORI_SN  | 원본뉴스SN + 생성일자      | ORI_NEWS_SN + D_ORI_NEWS_CRT of RTBL_NEWS_INFO
-                    '005930068270000660',    -- P_CODES   | 단축종목코드 + 관련종목코드 | RTBL_NEWS_INFO.STK_CODE  +RTBL_COM_RSC.RSC_CODE
-                    'TEST_TITLE',            -- 뉴스제목
-                    'test.com/test.jpg',     -- 대표이미지URL
-                    'N',                     -- 대표이미지가 있으면 Y 없으면 N
-                    'NS_BYU08',              -- 뉴스 코드 | EX: NS_BYU08
-                    '1111',                  -- 원본 데이터 식별값 (공시 RCPno 또는 리포트 SN 등)  
-                    19,                      -- 뉴스 source | 고정값 19
-                    P_RESULT_CD,             -- OUTPUT NUMBER
-                    P_RESULT_MSG             -- OUTPUT VARCHAR2(200)
-                )
-            """
-
-            self.nu_db.callproc("PROC_RASSIRO_NEWS_INSERT", proc_para)
+        if None in [news_code, news_sn, d_news_crt]:
             logger.info(
-                f"procedure return value {out_result_cd.getvalue()}, {out_result_msg.getvalue()}"
+                f"Please check message: news_code: {news_code}, news_sn: {news_sn}, d_news_crt: {d_news_crt}"
             )
-        except json.decoder.JSONDecodeError:
-            logger.info(f"메세지 형식 에러: {m.value}")
+            return
+
+        row = self.get_procedure_data(
+            d_news_crt=d_news_crt, sn=news_sn, news_code=news_code
+        )
+        if row is None:
+            logger.info(f"[error] 해당 정보가 테이블에서 검색 안됨")
+            return
+
+        proc_para = list(row.values())
+
+        cur = self.nu_db.conn.cursor()
+        out_result_cd = cur.var(int)
+        proc_para.append(out_result_cd)
+        out_result_msg = cur.var(str)
+        proc_para.append(out_result_msg)
+        """
+        입력예제 :
+            PROC_RASSIRO_NEWS_INSERT(
+                'I',                     -- P_INPUT   | 입력종류                  | I:입력, U:수정, D:삭제   
+                '100000020210312151515', -- P_NEWS_SN | SN + 생성일 + 생성시       | SN NEWS_SN + D_NEWS_CRT + T_NEWS_CRT of RTBL_NEWS_INFO
+                '100000020210312',       -- P_ORI_SN  | 원본뉴스SN + 생성일자      | ORI_NEWS_SN + D_ORI_NEWS_CRT of RTBL_NEWS_INFO
+                '005930068270000660',    -- P_CODES   | 단축종목코드 + 관련종목코드 | RTBL_NEWS_INFO.STK_CODE  +RTBL_COM_RSC.RSC_CODE
+                'TEST_TITLE',            -- 뉴스제목
+                'test.com/test.jpg',     -- 대표이미지URL
+                'N',                     -- 대표이미지가 있으면 Y 없으면 N
+                'NS_BYU08',              -- 뉴스 코드 | EX: NS_BYU08
+                '1111',                  -- 원본 데이터 식별값 (공시 RCPno 또는 리포트 SN 등)  
+                19,                      -- 뉴스 source | 고정값 19
+                P_RESULT_CD,             -- OUTPUT NUMBER
+                P_RESULT_MSG             -- OUTPUT VARCHAR2(200)
+            )
+        """
+
+        self.nu_db.callproc("PROC_RASSIRO_NEWS_INSERT", proc_para)
+        logger.info(
+            f"procedure return value {out_result_cd.getvalue()}, {out_result_msg.getvalue()}"
+        )
 
     def get_procedure_data(self, d_news_crt, sn, news_code):
         sql = f"""
@@ -132,3 +136,12 @@ class Subscriber(kafkaSubs, SubscriberManager):
             "ori_link_sn": r[8],
             "source": r[9],
         }
+
+    def change_requests_status(self, news_sn, d_news_crt, status="S", commit=True):
+        sql = f"""
+            UPDATE RTBL_NEWS_INFO
+            SET    ADM_SEND_STATUS = '{status}'
+            WHERE  NEWS_SN = {news_sn}
+            AND    D_NEWS_CRT = '{d_news_crt}'
+        """
+        self.nu_db.modify(sql, commit)
