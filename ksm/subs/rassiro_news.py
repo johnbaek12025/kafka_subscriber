@@ -31,6 +31,26 @@ class Subscriber(kafkaSubs, SubscriberManager):
         except Exception as err:
             logger.info(err)
 
+    def validate_message(self, m):
+        input = m["input"]
+        news_sn = m["news_sn"]
+        ori_sn = m["ori_sn"]
+        title = m["title"]
+        news_code = m["news_code"]
+
+        if input == "I":
+            if None in [news_sn, title, news_code]:
+                return False
+        elif input == "U":
+            if None in [news_sn, ori_sn, title, news_code]:
+                return False
+        elif input == "D":
+            if None in [news_sn, ori_sn, title, news_code]:
+                return False
+        else:
+            return False
+        return True
+
     def handle_message(self, m):
         message = json.loads(m.value)
         logger.info(f"subcribed message: {message}")
@@ -53,6 +73,9 @@ class Subscriber(kafkaSubs, SubscriberManager):
         )
         if row is None:
             logger.info(f"[error] 해당 정보가 테이블에서 검색 안됨")
+            return
+        if not self.validate_message(row):
+            logger.info(f"[error] input 타입에 필요한 값들이 없음")
             return
 
         proc_para = list(row.values())
@@ -90,18 +113,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             SELECT  A.NEWS_INP_KIND AS P_INPUT
                     , A.NEWS_SN || A.D_NEWS_CRT || A.T_NEWS_CRT       AS P_NEWS_SN  
                     , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT               AS P_ORI_SN        
-                    , A.STK_CODE || B.AGG_RSC_CODE                    AS P_CODES
-                    , A.NEWS_TITLE                                    AS P_TITLE  
-                    , DECODE(C.RPST_IMG_URL, 'N', '', C.RPST_IMG_URL) AS P_IMG_URL 
-                    , DECODE(C.RPST_IMG_URL, 'N', 'N', 'Y')           AS P_IMG_FLAG 
-                    , A.NEWS_CODE                                     AS P_NEWS_CODE
-                    , D.DBKEY                                         AS P_ORI_LINK_SN
-                    , 19                                              AS P_SOURCE --  뉴스 source | 고정값 19      
-            FROM    RTBL_NEWS_INFO A
-                    LEFT OUTER JOIN RTBL_COM_RDB_KEY D ON  A.D_NEWS_CRT = D.D_CRT 
-                                                       AND A.NEWS_SN    = D.SN   
-                    , (
-                        -- 굉장히 이상한 방식의 데이터 입력
+                    , A.STK_CODE || (                     
                         SELECT  LISTAGG(RSC_CODE,'') WITHIN GROUP (ORDER BY ROWNUM) AS AGG_RSC_CODE
                         FROM    (
                                     SELECT  RSC_CODE, ROWNUM RN
@@ -111,14 +123,20 @@ class Subscriber(kafkaSubs, SubscriberManager):
                                     ORDER BY ROWNUM DESC
                                 ) A
                         WHERE   ROWNUM  <= 7
-                    ) B
-                    , RTBL_NEWS_CNTS_ATYPE C   
-            WHERE   1 = 1
-            AND     A.D_NEWS_CRT = '{d_news_crt}'
+                    )  AS P_CODES
+                    , A.NEWS_TITLE                                    AS P_TITLE  
+                    , DECODE(C.RPST_IMG_URL, 'N', '', C.RPST_IMG_URL) AS P_IMG_URL 
+                    , DECODE(C.RPST_IMG_URL, 'N', 'N', 'Y')           AS P_IMG_FLAG 
+                    , A.NEWS_CODE                                     AS P_NEWS_CODE
+                    , D.DBKEY                                         AS P_ORI_LINK_SN
+                    , 19                                              AS P_SOURCE --  뉴스 source | 고정값 19      
+            FROM    RTBL_NEWS_INFO A
+                    LEFT OUTER JOIN RTBL_NEWS_CNTS_ATYPE C ON  A.D_NEWS_CRT = C.D_NEWS_CRT
+                                                           AND A.NEWS_SN    = C.NEWS_SN    
+                    LEFT OUTER JOIN RTBL_COM_RDB_KEY D ON  A.D_NEWS_CRT = D.D_CRT 
+                                                       AND A.NEWS_SN    = D.SN 
+            WHERE   A.D_NEWS_CRT = '{d_news_crt}'
             AND     A.NEWS_SN    = {sn}
-            AND     C.D_NEWS_CRT = '{d_news_crt}'
-            AND     C.NEWS_SN    = {sn}
- 
         """
         rows = self.nu_db.get_all_rows(sql)
         if not rows:

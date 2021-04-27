@@ -59,7 +59,13 @@ class kafkaSubs(object):
                             f"[kafka message] topic: {m.topic}, parttition: {m.partition}, "
                             f"offset: {m.offset}, key: {m.key}, value: {m.value}"
                         )
+                        logger.info(
+                            "[start] ############################################################################"
+                        )
                         self.handle_message(m)
+                        logger.info(
+                            "[end] ##############################################################################"
+                        )
 
         except (socket.error, socket.timeout, socket.herror) as e:
             logger.error(f"socket failure: {e}")

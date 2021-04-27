@@ -28,10 +28,10 @@ class Subscriber(kafkaSubs, SubscriberManager):
 
     def run(self):
         self.initialize()
-        try:
-            self.handle_messages()
-        except Exception as err:
-            logger.info(err)
+        # try:
+        self.handle_messages()
+        # except Exception as err:
+        #     logger.info(err)
 
     def handle_message(self, m):
         message = json.loads(m.value)
@@ -54,6 +54,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             d_news_crt=d_news_crt, sn=news_sn, news_code=news_code
         )
         if row is None:
+            logger.info(f"[error] 해당 정보가 테이블에서 검색 안됨")
             return
 
         proc_para = list(row.values())
@@ -81,8 +82,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             SELECT  A.NEWS_INP_KIND                     AS P_INP_KIND       
                     , A.NEWS_SN || A.D_NEWS_CRT         AS P_SN           
                     , A.ORI_NEWS_SN || A.D_ORI_NEWS_CRT AS P_ORI_SN
-                    , A.STK_CODE                        AS P_STKCODE   
-                    -- 인라인으로 하기 싫었지만, 상용과 개발을 혼합해서 사용해야 하는 상황이라...
+                    , A.STK_CODE                        AS P_STKCODE                     
                     , CASE WHEN A.IS_MANUAL = 0 THEN A.D_NEWS_CRT 
                       ELSE  (
                         SELECT  A.DATEDEAL
@@ -90,8 +90,8 @@ class Subscriber(kafkaSubs, SubscriberManager):
                                 , (
                                     SELECT  INFO_CODE, INFO_SN
                                     FROM    RTBL_COM_ALS_INFOSN 
-                                    WHERE   SN    = '{d_news_crt}'
-                                    AND     D_CRT = {sn}
+                                    WHERE   D_CRT = '{d_news_crt}'
+                                    AND     SN    = {sn}
                                 ) B
                         WHERE   A.SN        = B.INFO_SN
                         AND     A.INFO_CODE = B.INFO_CODE   
@@ -104,21 +104,25 @@ class Subscriber(kafkaSubs, SubscriberManager):
                     , C.NEWS_CNTS       AS P_MODULE_CNTS
                     , C.RPST_IMG_URL    AS P_MODULE_URL   
             FROM    RTBL_NEWS_INFO A 
-                    , RTBL_LUP_ALS_DESC B
-                    , RTBL_NEWS_CNTS_ATYPE C                
+                    LEFT OUTER JOIN RTBL_NEWS_CNTS_ATYPE C ON  A.D_NEWS_CRT = C.D_NEWS_CRT
+                                               AND A.NEWS_SN    = C.NEWS_SN
+                    , RTBL_LUP_ALS_DESC B             
             WHERE   1 = 1
             AND     A.D_NEWS_CRT    = '{d_news_crt}'
-            AND     A.NEWS_SN       = {sn}  
+            AND     A.NEWS_SN       = {sn} 
             AND     B.ALS_NEWS_CODE = '{news_code.upper()}'
-            AND     C.D_NEWS_CRT    = '{d_news_crt}'
-            AND     C.NEWS_SN       = {sn}  
         """
         rows = self.nu_db.get_all_rows(sql)
         if not rows:
             return None
         r = rows[0]
+        input = r[0]
+        if r[10] is None:
+            module_cnts = None
+        else:
+            module_cnts = r[10].read()
         return {
-            "inp_kind": r[0],
+            "inp_kind": input,
             "sn": r[1],
             "ori_sn": r[2],
             "stkcode": r[3],
@@ -128,7 +132,7 @@ class Subscriber(kafkaSubs, SubscriberManager):
             "module_name": r[7],
             "module_title": r[8],
             "module_summary": r[9],
-            "module_cnts": r[10].read(),
+            "module_cnts": module_cnts,
             "module_url": r[11],
         }
 
